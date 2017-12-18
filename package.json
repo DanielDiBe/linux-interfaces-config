@@ -2,7 +2,7 @@
   "name": "linux-interfaces-config",
   "version": "1.0.0",
   "description": "Read and write the linux /etc/network/interfaces file to check and change network connectivity.",
-  "main": "index.js",
+  "main": "interfaces-config.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
