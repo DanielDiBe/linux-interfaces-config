@@ -3,6 +3,8 @@ Read, parse and write the linux /etc/network/interfaces file to check and change
 
 This module is intended for use on embedded linux systems that require configuring the network interfaces and retain this configuration after system reboot.
 
+Currently only Debian and other /etc/network/interfaces file format compatible platforms can be managed with this module.
+
 ### Notes
 Promise based
 

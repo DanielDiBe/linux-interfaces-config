@@ -156,7 +156,7 @@ module.exports = (inputFile) => {
                             console.warn(`Error parsing interfaces line ${i}: '${data[i]}'`);
                             continue;
                         }
-                        else if(words[0]==="auto")
+                        else if(words[0]==="auto" || words[0]==="allow-auto")
                         {
                             getInterface(words[1]).auto = true;
                             continue;
@@ -189,16 +189,18 @@ module.exports = (inputFile) => {
                                 break;
                             // Open Wireless
                             case "wireless-essid":
-                                ipfamily.wirelessEssid = words.slice(1);
+                                ipfamily.wirelessEssid = words.slice(1).join(" ");
                                 break;
                             case "wireless-mode":
                                 ipfamily.wirelessMode = words[1];
                                 break;
                             // WPA Wireless
                             case "wpa-ssid":
-                                ipfamily.wpaSsid = words.slice(1);
+                                ipfamily.wpaSsid = words.slice(1).join(" ");
+                                break;
                             case "wpa-psk":
-                                ipfamily.wpaPsk = words.slice(1);
+                                ipfamily.wpaPsk = words.slice(1).join(" ");
+                                break;
                             default:
                                 console.warn(`Unrecognized config option ${words[0]} at line ${i}`)
                                 break;
