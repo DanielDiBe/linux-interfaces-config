@@ -1,6 +1,6 @@
 {
   "name": "linux-interfaces-config",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Read and write the linux /etc/network/interfaces file to check and change network connectivity.",
   "main": "interfaces-config.js",
   "scripts": {
