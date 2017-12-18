@@ -46,6 +46,16 @@ function getProtocolConfig(name, config, family)
         lines.push(`gateway ${config.gateway}`);
     if(config.dnsNameservers)
         lines.push(`dns-nameservers ${config.dnsNameservers.join(" ")}`);
+    // Public wifi configuration
+    if(config.wirelessEssid)
+        lines.push(`wireless-essid ${config.wirelessEssid}`);
+    if(config.wirelessMode)
+        lines.push(`wireless-mode ${config.wirelessMode}`);
+    // WPA protected wifi configuration
+    if(config.wpaSsid)
+        lines.push(`wpa-ssid ${config.wpaSsid}`);
+    if(config.wpaPsk)
+        lines.push(`wpa-psk ${config.wpaPsk}`);
     return `${lines.join("\n    ")}\n\n`;
 }
 
@@ -177,6 +187,18 @@ module.exports = (inputFile) => {
                             case "dns-nameservers":
                                 ipfamily.dnsNameservers = words.slice(1);
                                 break;
+                            // Open Wireless
+                            case "wireless-essid":
+                                ipfamily.wirelessEssid = words.slice(1);
+                                break;
+                            case "wireless-mode":
+                                ipfamily.wirelessMode = words[1];
+                                break;
+                            // WPA Wireless
+                            case "wpa-ssid":
+                                ipfamily.wpaSsid = words.slice(1);
+                            case "wpa-psk":
+                                ipfamily.wpaPsk = words.slice(1);
                             default:
                                 console.warn(`Unrecognized config option ${words[0]} at line ${i}`)
                                 break;
