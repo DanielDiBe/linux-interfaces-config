@@ -24,7 +24,8 @@ SOFTWARE.
 
 const fs = require("fs");
 
-const getLineWords = (str) => {
+function getLineWords(str)
+{
     // Returns all words in the line after trimming spaces and removing comments
     let i = str.indexOf("#");
     if(-1===i)
@@ -32,109 +33,156 @@ const getLineWords = (str) => {
     return str.slice(0, i).trim().split(" ").filter((w)=>w);
 };
 
+function getProtocolConfig(name, config, family)
+{
+    const lines = [`iface ${name} inet${family===6 ? family:""} ${config.config}`];
+    if(config.address)
+        lines.push(`address ${config.address}`);
+    if(config.netmask)
+        lines.push(`netmask ${config.netmask}`);
+    if(config.network)
+        lines.push(`network ${config.network}`);
+    if(config.gateway)
+        lines.push(`gateway ${config.gateway}`);
+    if(config.dnsNameservers)
+        lines.push(`dns-nameservers ${config.dnsNameservers.join(" ")}`);
+    return `${lines.join("\n    ")}\n\n`;
+}
+
 module.exports = (inputFile) => {
     if(!inputFile)
         inputFile = "/etc/network/interfaces";
     return {
-        write: (callback) => {
-
-        },
-        read: (callback) => {
-            if(!callback)
-                callback = console.log;
-            fs.readFile(inputFile, "utf8", (err, data) => {
-                if(err)
-                {
-                    callback(err);
-                    return;
-                }
+        setInputFile: ifaceFile => inputFile = ifaceFile,
+        getInputFile: () => inputFile,
+        write: (interfaces) => {
+            // Overwrites the whole interfaces configuration
+            return new Promise((resolve, reject) => {
+                const stream = fs.WriteStream(inputFile);
+                // Error and closing events should be ready before writting
+                stream.on("close", () => {
+                    resolve(stream.bytesWritten);
+                });
+                stream.on("error", (err) => {
+                    reject(err);
+                });
                 let iface;
-                let interfaces = {};
-                const getInterface = (iface) => {
-                    // Retrieve this interface object, ensuring it exists by creating
-                    // a new one if not
-                    if(interfaces[iface])
-                        return interfaces[iface];
-                    return interfaces[iface] = {
-                        auto: false,
-                        hotplug: false
-                    };
-                };
-
-                let words;
-                let ipfamily;
-                // Iterate through the interfaces lines
-                data = data.split("\n");
-                let lineCount = data.length;
-                for(let i=0;i<lineCount;i++)
+                let ifaceName;
+                const ifaceList = Object.keys(interfaces);
+                for(let i=0,ifaceCount=ifaceList.length;i<ifaceCount;i++)
                 {
-                    words = getLineWords(data[i]);
-                    // Skip empty lines
-                    if(!words.length)
-                        continue;
-                    // Look up iface and whether it is dhcp, static or manual
-                    // Example: iface eth0 inet [dhcp|static|manual]
-                    if(words[0]==="iface")
+                    ifaceName = ifaceList[i];
+                    iface = interfaces[ifaceName];
+                    if(iface.auto)
+                        stream.write(`auto ${ifaceName}\n`);
+                    if(iface.hotplug)
+                        stream.write(`allow-hotplug ${ifaceName}\n`);
+                    if(iface.ip4)
+                        stream.write(getProtocolConfig(ifaceName, iface.ip4, 4));
+                    if(iface.ip6)
+                        stream.write(getProtocolConfig(ifaceName, iface.ip6, 6));
+                    // End of interface
+                }
+                // Finish and close the stream
+                stream.end("");
+            });
+        },
+        read: () => {
+            return new Promise((resolve, reject) => {
+                fs.readFile(inputFile, "utf8", (err, data) => {
+                    if(err)
                     {
-                        if(words.length>=4)
+                        reject(err);
+                        return;
+                    }
+                    let iface;
+                    let interfaces = {};
+                    const getInterface = (iface) => {
+                        // Retrieve this interface object, ensuring it exists by creating
+                        // a new one if not
+                        if(interfaces[iface])
+                            return interfaces[iface];
+                        return interfaces[iface] = {
+                            auto: false,
+                            hotplug: false
+                        };
+                    };
+
+                    let words;
+                    let ipfamily;
+                    // Iterate through the interfaces lines
+                    data = data.split("\n");
+                    let lineCount = data.length;
+                    for(let i=0;i<lineCount;i++)
+                    {
+                        words = getLineWords(data[i]);
+                        // Skip empty lines
+                        if(!words.length)
+                            continue;
+                        // Look up iface and whether it is dhcp, static or manual
+                        // Example: iface eth0 inet [dhcp|static|manual]
+                        if(words[0]==="iface")
                         {
-                            // Ensure declaration of this interface and ipfamily addresses
-                            if(words[2]==="inet" || words[2]==="inet4")
-                                getInterface(words[1]).ip4 = ipfamily = {};
-                            else if(words[2]==="inet6")
-                                getInterface(words[1]).ip6 = ipfamily = {};
-                            else
-                                ipfamily = null;
-                            // If no family found skip and continue to parse error
-                            if(ipfamily!==null)
+                            if(words.length>=4)
                             {
-                                if(["dhcp", "static", "manual", "auto", "loopback"].includes(words[3]))
+                                // Ensure declaration of this interface and ipfamily addresses
+                                if(words[2]==="inet" || words[2]==="inet4")
+                                    getInterface(words[1]).ip4 = ipfamily = {};
+                                else if(words[2]==="inet6")
+                                    getInterface(words[1]).ip6 = ipfamily = {};
+                                else
+                                    ipfamily = null;
+                                // If no family found skip and continue to parse error
+                                if(ipfamily!==null)
                                 {
-                                    ipfamily.config = words[3];
-                                    continue;
+                                    if(["dhcp", "static", "manual", "auto", "loopback"].includes(words[3]))
+                                    {
+                                        ipfamily.config = words[3];
+                                        continue;
+                                    }
                                 }
                             }
+                            console.warn(`Error parsing interfaces line ${i}: '${data[i]}'`);
+                            continue;
                         }
-                        console.error(`Error parsing interfaces line ${i}: '${data[i]}'`);
-                        continue;
-                    }
-                    else if(words[0]==="auto")
-                    {
-                        getInterface(words[1]).auto = true;
-                        continue;
-                    }
-                    else if(words[0]==="allow-hotplug")
-                    {
-                        getInterface(words[1]).hotplug = true;
-                        continue;
-                    }
+                        else if(words[0]==="auto")
+                        {
+                            getInterface(words[1]).auto = true;
+                            continue;
+                        }
+                        else if(words[0]==="allow-hotplug")
+                        {
+                            getInterface(words[1]).hotplug = true;
+                            continue;
+                        }
 
-                    // If no interface is loaded there is no sense for the static line config
-                    if(!ipfamily)
-                        continue;
-                    switch(words[0])
-                    {
-                        case "address":
-                            ipfamily.address = words[1];
-                            break;
-                        case "netmask":
-                            ipfamily.netmask = words[1];
-                            break;
-                        case "gateway":
-                            ipfamily.gateway = words[1];
-                            break;
-                        case "network":
-                            ipfamily.network = words[1];
-                            break;
-                        case "dns-nameservers":
-                            ipfamily.dnsNameservers = words.slice(1);
-                            break;
-                        default:
-                            console.error(`Unrecognized config option ${words[0]} at line ${i}`)
-                            break;
+                        // If no interface is loaded there is no sense for the static line config
+                        if(!ipfamily)
+                            continue;
+                        switch(words[0])
+                        {
+                            case "address":
+                                ipfamily.address = words[1];
+                                break;
+                            case "netmask":
+                                ipfamily.netmask = words[1];
+                                break;
+                            case "gateway":
+                                ipfamily.gateway = words[1];
+                                break;
+                            case "network":
+                                ipfamily.network = words[1];
+                                break;
+                            case "dns-nameservers":
+                                ipfamily.dnsNameservers = words.slice(1);
+                                break;
+                            default:
+                                console.warn(`Unrecognized config option ${words[0]} at line ${i}`)
+                                break;
+                        }
                     }
-                }
-                callback(null, interfaces);
+                    resolve(interfaces);
+                });
             });
         }
     };
