@@ -1,11 +1,19 @@
 {
   "name": "linux-interfaces-config",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Read and write the linux /etc/network/interfaces file to check and change network connectivity.",
   "main": "interfaces-config.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "daniel.diaz.benito@gmail.com",
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DanielDiBe/linux-interfaces-config.git"
+  },
+  "bugs": {
+    "url": "https://github.com/DanielDiBe/linux-interfaces-config/issues"
+  },
+  "homepage": "https://github.com/DanielDiBe/linux-interfaces-config#readme"
 }

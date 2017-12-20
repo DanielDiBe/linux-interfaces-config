@@ -59,6 +59,13 @@ function getProtocolConfig(name, config, family)
     return `${lines.join("\n    ")}\n\n`;
 }
 
+function stripEnclosingCharacter(str, cha)
+{
+    if(str[0]===cha && str.slice(-1)===cha)
+        return str.slice(1, -1);
+    return str;
+}
+
 module.exports = (inputFile) => {
     if(!inputFile)
         inputFile = "/etc/network/interfaces";
@@ -196,10 +203,10 @@ module.exports = (inputFile) => {
                                 break;
                             // WPA Wireless
                             case "wpa-ssid":
-                                ipfamily.wpaSsid = words.slice(1).join(" ");
+                                ipfamily.wpaSsid = stripEnclosingCharacter(words.slice(1).join(" "), "\"");
                                 break;
                             case "wpa-psk":
-                                ipfamily.wpaPsk = words.slice(1).join(" ");
+                                ipfamily.wpaPsk = stripEnclosingCharacter(words.slice(1).join(" "), "\"");
                                 break;
                             default:
                                 console.warn(`Unrecognized config option ${words[0]} at line ${i}`)
